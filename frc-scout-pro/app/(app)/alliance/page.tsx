@@ -184,13 +184,34 @@ export default function AlliancePage() {
     else toast.success('Picklist saved!')
   }
 
-  // Alliance suggestion
-  const top5 = rows.filter((r) => !r.blacklisted).slice(0, 5)
-  const ourEPA = 40 // placeholder for Team 418's EPA
-  const suggestions = top5.map((r) => ({
-    team: r.team_number,
-    projectedEPA: ourEPA + (r.epa_mean ?? 0),
-  }))
+  // Alliance suggestion with synergy scoring.
+  // Synergy accounts for complementary capabilities, not just raw EPA sum:
+  //  - High climb partner = endgame reliability bonus
+  //  - High cycle partner = teleop multiplier
+  //  - Reliable partner = reduces alliance breakdown risk
+  const ourRow = rows.find((r) => r.team_number === 418)
+  const ourEPA = ourRow?.epa_mean ?? rows[0]?.epa_mean ?? 40
+  const ourClimb = ourRow?.climbRate ?? 0.5
+
+  const top5 = rows
+    .filter((r) => !r.blacklisted && r.team_number !== 418)
+    .slice(0, 5)
+
+  const suggestions = top5.map((r) => {
+    const baseEPA = ourEPA + (r.epa_mean ?? 0)
+    // Synergy bonuses — capped at ±15% of base
+    const climbBonus = r.climbRate > 0.8 && ourClimb < 0.7 ? baseEPA * 0.05 : 0
+    const cycleBonus = r.cycleAvg > 5 ? baseEPA * 0.03 : 0
+    const reliabilityBonus = r.reliability > 0.9 ? baseEPA * 0.04 : r.reliability < 0.7 ? baseEPA * -0.08 : 0
+    const synergyScore = baseEPA + climbBonus + cycleBonus + reliabilityBonus
+    return {
+      team: r.team_number,
+      nickname: r.nickname,
+      projectedEPA: synergyScore,
+      climbRate: r.climbRate,
+      reliability: r.reliability,
+    }
+  }).sort((a, b) => b.projectedEPA - a.projectedEPA)
 
   if (!activeEvent) {
     return <EmptyState icon={Handshake} title="No event selected" description="Choose an event from the top bar to get started." />
@@ -307,14 +328,23 @@ export default function AlliancePage() {
             </CardHeader>
             <CardContent className="space-y-2">
               {suggestions.map((s, i) => (
-                <div key={s.team} className="flex items-center justify-between p-2 rounded-lg bg-slate-800">
-                  <div>
-                    <span className="text-slate-500 text-xs mr-2">{i + 1}.</span>
-                    <span className="text-white text-sm font-medium">{s.team}</span>
+                <div key={s.team} className="p-2 rounded-lg bg-slate-800 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-slate-500 text-xs">{i + 1}.</span>
+                      <span className="text-white text-sm font-medium">{s.team}</span>
+                      {s.nickname && <span className="text-slate-400 text-xs truncate">{s.nickname}</span>}
+                    </div>
+                    <span className="text-emerald-400 text-xs font-medium tabular-nums shrink-0">
+                      ~{s.projectedEPA.toFixed(1)} EPA
+                    </span>
                   </div>
-                  <span className="text-emerald-400 text-xs font-medium tabular-nums">
-                    ~{s.projectedEPA.toFixed(1)} EPA
-                  </span>
+                  <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                    <span>Climb {(s.climbRate * 100).toFixed(0)}%</span>
+                    <span className={cn(
+                      s.reliability >= 0.9 ? 'text-emerald-400' : s.reliability >= 0.7 ? 'text-amber-400' : 'text-red-400'
+                    )}>Rel {(s.reliability * 100).toFixed(0)}%</span>
+                  </div>
                 </div>
               ))}
               {suggestions.length === 0 && <p className="text-slate-500 text-xs">Add teams to see suggestions</p>}

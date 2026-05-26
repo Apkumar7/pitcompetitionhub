@@ -147,7 +147,7 @@ export default function StrategyPage() {
         {selectedMatchId && (
           <button
             onClick={fetchAIInsights}
-            disabled={loadingInsights || !process.env.NEXT_PUBLIC_APP_URL}
+            disabled={loadingInsights}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-600/20 border border-purple-500/30 text-purple-300 text-sm hover:bg-purple-600/30 transition-colors disabled:opacity-50"
           >
             <Lightbulb className="h-3.5 w-3.5" />
