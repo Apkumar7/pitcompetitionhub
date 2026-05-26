@@ -215,16 +215,7 @@ Kept the E2E tests pragmatic — the route-protection tests (unauthenticated red
 | 10 | Unit test suite (Vitest) | `tests/unit/*.test.ts`, `vitest.config.ts`, `tests/setup.ts` | ✅ |
 | 11 | Playwright E2E scaffolding | `playwright.config.ts`, `tests/e2e/*.spec.ts` | ✅ |
 
-**SQL migrations to run in Supabase before next session:**
-```sql
--- From 001_add_missing_columns.sql
-ALTER TABLE event_teams ADD COLUMN IF NOT EXISTS epa_mean float8, ...;
--- From 002_team_number_and_notifications.sql
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS team_number integer;
-ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type text DEFAULT 'info';
--- From 003_team_role.sql
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS team_role text
-  CHECK (team_role IN ('drive_team', 'pit_crew', 'scout', 'strategist', 'general'));
+
 ```
 
 
